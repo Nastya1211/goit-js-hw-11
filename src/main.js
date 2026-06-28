@@ -1,0 +1,69 @@
+import iziToast from 'iziToast';
+import 'iziToast/dist/css/iziToast.min.css';
+
+import { getImagesByQuery } from './js/pixabay-api.js';
+import {
+  createGallery,
+  clearGallery,
+  showLoader,
+  hideLoader,
+} from './js/render-functions.js';
+
+const searchForm = document.querySelector('.form');
+
+searchForm.addEventListener('submit', handleSearch);
+
+function handleSearch(event) {
+  event.preventDefault();
+
+  const form = event.currentTarget;
+  const searchQuery = form.elements['search-text'].value.trim();
+
+  // Перевірка на порожній рядок
+  if (searchQuery === '') {
+    iziToast.warning({
+      title: 'Caution',
+      message: 'Please enter a search query!',
+      position: 'topRight',
+    });
+    return;
+  }
+
+  // Готуємо інтерфейс до нового запиту
+  clearGallery();
+  showLoader();
+
+  // Виконуємо HTTP-запит
+  getImagesByQuery(searchQuery)
+    .then(data => {
+      // Якщо масив hits порожній — нічого не знайдено
+      if (data.hits.length === 0) {
+        iziToast.error({
+          title: 'Error',
+          message:
+            'Sorry, there are no images matching your search query. Please try again!',
+          position: 'topRight',
+          backgroundColor: '#ef4040',
+          titleColor: '#fff',
+          messageColor: '#fff',
+        });
+        return;
+      }
+
+      // Відмальовуємо галерею
+      createGallery(data.hits);
+    })
+    .catch(error => {
+      console.error(error);
+      iziToast.error({
+        title: 'Error',
+        message: 'Something went wrong. Please try again later.',
+        position: 'topRight',
+      });
+    })
+    .finally(() => {
+      // Ховаємо лоадер у будь-якому випадку
+      hideLoader();
+      form.reset();
+    });
+}
